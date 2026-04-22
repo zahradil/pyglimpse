@@ -11,31 +11,56 @@ import { readFileSync } from "node:fs";
 
 const HOST_SCRIPT = join(fileURLToPath(new URL(".", import.meta.url)), "host.py");
 
-function resolveUvPath(): string {
+function isWSL2(): boolean {
+  try {
+    const v = readFileSync("/proc/version", "utf-8").toLowerCase();
+    return v.includes("microsoft") || v.includes("wsl");
+  } catch {
+    return false;
+  }
+}
+
+function resolveUvPath(): { path: string } | { error: string } {
   // 1. settings.json override: pyglimpse.uvPath
   try {
     const settingsPath = join(homedir(), ".pi", "agent", "settings.json");
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     const uvPath = (settings?.pyglimpse as Record<string, unknown>)?.uvPath;
-    if (uvPath && typeof uvPath === "string") return uvPath;
+    if (uvPath && typeof uvPath === "string") return { path: uvPath };
   } catch {}
 
-  // 2. uv.exe in PATH (WSL with Windows uv)
+  const wsl = isWSL2();
+
+  // 2. uv.exe in PATH (WSL2 with Windows uv)
   try {
     const result = execSync("which uv.exe", { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    if (result) return result;
+    if (result) return { path: result };
   } catch {}
 
-  // 3. uv in PATH (Linux / macOS)
-  try {
-    const result = execSync("which uv", { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    if (result) return result;
-  } catch {}
+  // 3. uv in PATH — only on non-WSL systems (Linux uv can't render Windows windows)
+  if (!wsl) {
+    try {
+      const result = execSync("which uv", { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+      if (result) return { path: result };
+    } catch {}
+  }
 
-  throw new Error(
-    "[pyglimpse] uv not found. Install uv (https://docs.astral.sh/uv/getting-started/installation/) " +
-    "or set pyglimpse.uvPath in ~/.pi/agent/settings.json"
-  );
+  if (wsl) {
+    return { error:
+      "pyglimpse needs uv.exe (Windows binary) on WSL2 to render native Windows windows.\n" +
+      "Options:\n" +
+      "  A) Add Windows uv directory to WSL PATH in ~/.bashrc:\n" +
+      "       export PATH=\"$PATH:/mnt/c/Users/<you>/AppData/Local/uv\"\n" +
+      "  B) Set uvPath in ~/.pi/agent/settings.json:\n" +
+      '       { "pyglimpse": { "uvPath": "/mnt/c/path/to/uv.exe" } }\n' +
+      "  Install uv for Windows: https://docs.astral.sh/uv/getting-started/installation/#windows"
+    };
+  }
+
+  return { error:
+    "pyglimpse: uv not found. Install uv: https://docs.astral.sh/uv/getting-started/installation/\n" +
+    'Or set pyglimpse.uvPath in ~/.pi/agent/settings.json: { "pyglimpse": { "uvPath": "/path/to/uv" } }'
+  };
 }
 
 // ─── Host process manager ──────────────────────────────────────────────────
@@ -46,8 +71,9 @@ class PyGlimpseHost extends EventEmitter {
   private queue: string[] = [];
 
   start() {
-    const uvPath = resolveUvPath();
-    this.proc = spawn(uvPath, ["run", "--with", "pywebview", HOST_SCRIPT], {
+    const uv = resolveUvPath();
+    if ("error" in uv) throw new Error(uv.error);
+    this.proc = spawn(uv.path, ["run", "--with", "pywebview", HOST_SCRIPT], {
       stdio: ["pipe", "pipe", "pipe"],
     });
 
@@ -174,6 +200,19 @@ function testHtml(): string {
 export default function (pi: ExtensionAPI) {
   const host = new PyGlimpseHost();
   let hostStarted = false;
+
+  // ─── Onboarding check ───────────────────────────────────────────────────
+
+  pi.on("session_start", async (_event, ctx) => {
+    const uv = resolveUvPath();
+    if ("error" in uv) {
+      ctx.ui.notify("pyglimpse: uv not configured — windows won't open", "warning");
+      pi.sendMessage(
+        { customType: "pyglimpse-config", content: `⚠️ **pyglimpse setup needed**\n\n${uv.error}`, display: true },
+        { triggerTurn: false },
+      );
+    }
+  });
 
   function ensureHost() {
     if (!hostStarted) {
