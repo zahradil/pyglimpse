@@ -1,0 +1,11 @@
+{
+  "name": "pyglimpse",
+  "version": "0.1.0",
+  "description": "Native HTML windows for pi agent via Python + pywebview. Works on WSL2, Linux, and macOS.",
+  "license": "MIT",
+  "keywords": ["pi-package", "pi-extension", "glimpse", "pywebview", "wsl"],
+  "pi": {
+    "extensions": ["./index.ts"],
+    "skills": ["./skills"]
+  }
+}
