@@ -1,3 +1,8 @@
+---
+name: pyglimpse
+description: Show native HTML windows from pi agent using Python + pywebview. Use when you need to display HTML to the user, collect input, show a chart, or create any visual interaction. Provides pyglimpse_show, pyglimpse_close, pyglimpse_eval, pyglimpse_watch tools.
+---
+
 # pyglimpse Skill
 
 Nativní okna s HTML/CSS/JS nebo URL z WSL2 — přes pywebview + Edge WebView2 na Windows.
