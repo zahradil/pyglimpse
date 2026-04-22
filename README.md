@@ -1,6 +1,6 @@
 # pyglimpse
 
-Native HTML windows for [pi coding agent](https://github.com/badlogicgames/pi) via Python + pywebview.
+Native HTML windows for [pi coding agent](https://pi.dev/) via Python + pywebview.
 
 - inspired by pi package [glimpse by HazAT](https://github.com/hazat/glimpse)
 - works on **WSL2** - renders as native Windows window via WebView2 via python runtime
