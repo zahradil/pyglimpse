@@ -1,8 +1,16 @@
 # pyglimpse
 
-Native HTML windows for [pi coding agent](https://github.com/badlogicgames/pi) via Python + pywebview.
+Native HTML windows for [pi coding agent](https://pi.dev/) via Python + pywebview.
 
-Works on **WSL2** (renders as native Windows window via WebView2), **Linux**, and **macOS**.
+- inspired by pi package [glimpse by HazAT](https://github.com/hazat/glimpse)
+- works on **WSL2** - renders as native Windows window via WebView2 via python runtime
+- should work on **Linux** and **macOS** via python runtime too
+- reactive, bidirectional communication:
+  
+```
+pi extension (TS)  ←stdin/stdout JSON Lines→  host.py (Python/Windows)  →  WebView2
+```
+
 
 ## Install
 
@@ -38,8 +46,6 @@ By default pyglimpse looks for `uv` / `uv.exe` in PATH. Override in `~/.pi/agent
 
 Slash command: `/py show | notify <text> | close <id> | eval <id> <js> | stop`
 
-## Architecture
 
-```
-pi extension (TS)  ←stdin/stdout JSON Lines→  host.py (Python/Windows)  →  WebView2
-```
+
+
