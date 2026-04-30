@@ -9,14 +9,21 @@ import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 
-const HOST_SCRIPT = join(fileURLToPath(new URL(".", import.meta.url)), "host.py");
-
 function isWSL2(): boolean {
   try {
     const v = readFileSync("/proc/version", "utf-8").toLowerCase();
     return v.includes("microsoft") || v.includes("wsl");
   } catch {
     return false;
+  }
+}
+
+let HOST_SCRIPT = join(fileURLToPath(new URL(".", import.meta.url)), "host.py");
+if (isWSL2()) {
+  try {
+    HOST_SCRIPT = execSync(`wslpath -w "${HOST_SCRIPT}"`, { encoding: "utf-8" }).trim();
+  } catch (err) {
+    console.warn("[pyglimpse] Failed to convert HOST_SCRIPT path for WSL:", err);
   }
 }
 
